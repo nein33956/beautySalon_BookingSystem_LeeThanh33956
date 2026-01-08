@@ -97,8 +97,8 @@ export default function Navbar() {
           </li>
           <li>
             <a 
-              href="#services" 
-              onClick={(e) => handleNavClick(e, 'services')}
+              href="/services" 
+              onClick={(e) => setIsMenuOpen(false)}
             >
               Service
             </a>
@@ -106,7 +106,7 @@ export default function Navbar() {
           <li>
             <a 
               href="#contact" 
-              onClick={(e) => handleNavClick(e, 'contact')}
+              onClick={() => handleNavClick(e, 'contact')}
             >
               Contact
             </a>

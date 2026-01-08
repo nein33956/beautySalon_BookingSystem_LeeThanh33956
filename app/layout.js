@@ -3,7 +3,7 @@ import './BookingPage.css'
 import './DateTimeSelector.css'
 
 export const metadata = {
-  title: 'MESSI_1419 Beauty Salon',
+  title: 'MESSI_1419 BEAUTY SALON',
   description: 'Professional beauty services with easy online booking',
 }
 

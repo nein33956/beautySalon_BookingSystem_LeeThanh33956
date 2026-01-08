@@ -13,7 +13,7 @@ function CustomerInfoForm({ bookingData, setBookingData, services, errors, onNex
 
   return (
     <div className="form-step">
-      <h2>📝 Customer information</h2>
+      <h2>Customer information</h2>
       <p className="subtitle">Step 1/3: Fill in your information</p>
 
       <form onSubmit={handleSubmit}>
@@ -70,7 +70,7 @@ function CustomerInfoForm({ bookingData, setBookingData, services, errors, onNex
           <select
             id="service"
             value={bookingData.serviceId || ''}
-            onChange={(e) => handleChange('serviceId', parseInt(e.target.value))}
+            onChange={(e) => handleChange('serviceId', e.target.value)}
             className={errors.serviceId ? 'error' : ''}
           >
             <option value="">-- Select service --</option>

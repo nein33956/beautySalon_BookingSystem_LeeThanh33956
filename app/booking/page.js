@@ -7,6 +7,7 @@ import CustomerInfoForm from '@/components/booking/CustomerInfoForm'
 import DateTimeSelector from '@/components/booking/DateTimeSelector'
 import BookingSummary from '@/components/booking/BookingSummary'
 import BookingSuccess from '@/components/booking/BookingSuccess'
+import { getAllServices } from '@/lib/services'
 
 function BookingPageContent() {
   const router = useRouter()
@@ -26,14 +27,26 @@ function BookingPageContent() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
-  const services = [
-    { id: 1, name: 'Haircut', price: 200000, duration: 70 },
-    { id: 2, name: 'Hair Coloring', price: 500000, duration: 120 },
-    { id: 3, name: 'Hair Styling', price: 180000, duration: 75 },
-    { id: 4, name: 'Nail Art', price: 400000, duration: 100 },
-    { id: 5, name: 'Manicure & Pedicure', price: 300000, duration: 1200 },
-    { id: 6, name: 'Massage', price: 800000, duration: 1200 }
-  ]
+  // const services = [
+  //   { id: 1, name: 'Haircut', price: 200000, duration: 70 },
+  //   { id: 2, name: 'Hair Coloring', price: 500000, duration: 120 },
+  //   { id: 3, name: 'Hair Styling', price: 180000, duration: 75 },
+  //   { id: 4, name: 'Nail Art', price: 400000, duration: 100 },
+  //   { id: 5, name: 'Manicure & Pedicure', price: 300000, duration: 1200 },
+  //   { id: 6, name: 'Massage', price: 800000, duration: 1200 }
+  // ]
+  const [services, setServices] = useState([])
+
+  useEffect(() => {
+    fetchServices()
+  }, [])
+
+  async function fetchServices() {
+    const { data, error } = await getAllServices()
+    if (!error && data) {
+      setServices(data)
+    }
+}
 
   const currentService = services.find(s => s.id === bookingData.serviceId)
 

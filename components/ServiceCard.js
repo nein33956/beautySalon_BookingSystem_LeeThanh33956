@@ -6,7 +6,8 @@ function ServiceCard({ service, isSelected, onClick, onViewDetails, onBookClick 
     >
       {/* Service Image */}
       <div className="service-image">
-        <img src={service.image} alt={service.name} />
+
+        <img src={service.image_url || '/placeholder.jpg'} alt={service.name} />  
         <span className="category-badge">{service.category}</span>
         
         {/* Selected indicator */}
@@ -60,3 +61,4 @@ function ServiceCard({ service, isSelected, onClick, onViewDetails, onBookClick 
 }
 
 export default ServiceCard;
+ 

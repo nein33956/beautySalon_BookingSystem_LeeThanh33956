@@ -13,7 +13,7 @@ function BookingSummary({ bookingData, currentService, isConfirmation }) {
 
   return (
     <div className={`booking-summary ${isConfirmation ? 'confirmation' : ''}`}>
-      <h3>📋 Scheduling information</h3>
+      <h3>Scheduling information</h3>
 
       <div className="summary-section">
         <div className="summary-item">

@@ -70,7 +70,7 @@ function DateTimeSelector({ bookingData, setBookingData, currentService, errors,
 
   return (
     <div className="form-step">
-      <h2>📅 Select date & time</h2>
+      <h2>Select date & time</h2>
       <p className="subtitle">Step 2/3: Choose a suitable time</p>
 
       <form onSubmit={handleSubmit}>
@@ -80,7 +80,7 @@ function DateTimeSelector({ bookingData, setBookingData, currentService, errors,
             <h4>Selected service:</h4>
             <div className="service-info-content">
               <span className="service-name">{currentService.name}</span>
-              <span className="service-duration">⏱️ {currentService.duration} minutes</span>
+              <span className="service-duration"> {currentService.duration} minutes</span>
               <span className="service-price">
                 {currentService.price.toLocaleString('vi-VN')} VND
               </span>

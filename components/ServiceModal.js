@@ -31,7 +31,9 @@ function ServiceModal({ service, onClose, onBook }) {
 
         {/* Modal Image */}
         <div className="modal-image">
-          <img src={service.image} alt={service.name} />
+          <img src={service.image_url || '/placeholder.jpg'}  
+          alt={service.name} 
+          onError={(e) => { e.target.src = '/placeholder.jpg' }}/>
         </div>
 
         {/* Modal Body */}
