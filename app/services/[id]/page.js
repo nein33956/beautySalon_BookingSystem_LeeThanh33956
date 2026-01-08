@@ -16,44 +16,6 @@ export default function ServiceDetailPage({ params }) {
   const [error, setError] = useState(null)
   const { id } = useParams()
 
-
-  // useEffect(() => {
-  //   const fetchService = async () => {
-  //     if (!params?.id) {
-  //       setError('Invalid service ID')
-  //       setLoading(false)
-  //       return
-  //     }
-
-  //     try {
-  //       setLoading(true)
-  //       setError(null)
-
-  //       console.log('Fetching service with ID:', params.id)
-
-  //       const { data, error } = await getServiceById(params.id)
-
-  //       if (error) {
-  //         console.error('Error from API:', error)
-  //         throw new Error(error)
-  //       }
-
-  //       if (!data) {
-  //         setError('Service not found')
-  //       } else {
-  //         console.log('Service loaded:', data)
-  //         setService(data)
-  //       }
-  //     } catch (err) {
-  //       console.error('Error fetching service:', err)
-  //       setError('Failed to load service details.')
-  //     } finally {
-  //       setLoading(false)
-  //     }
-  //   }
-
-  //   fetchService()
-  // }, [.id])
   useEffect(() => {
     if (!id) return
 
