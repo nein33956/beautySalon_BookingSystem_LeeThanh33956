@@ -54,11 +54,11 @@ function BookingPageContent() {
     }
 
     const phoneRegex = /^[0-9]{10}$/
-    if (!phoneRegex.test(bookingData.phone)) {
+    if(!phoneRegex.test(bookingData.phone)){
       newErrors.phone = 'The phone number must have 10 digits.'
     }
 
-    if (!bookingData.serviceId) {
+    if(!bookingData.serviceId){
       newErrors.serviceId = 'Please select a service'
     }
 
@@ -69,11 +69,11 @@ function BookingPageContent() {
   const validateStep2 = () => {
     const newErrors = {}
 
-    if (!bookingData.date) {
+    if(!bookingData.date){
       newErrors.date = 'Please select date'
     }
 
-    if (!bookingData.time) {
+    if(!bookingData.time){
       newErrors.time = 'Please select time'
     }
 
@@ -82,15 +82,15 @@ function BookingPageContent() {
   }
 
   const handleNext = () => {
-    if (step === 1 && validateStep1()) {
+    if(step === 1 && validateStep1()){
       setStep(2)
-    } else if (step === 2 && validateStep2()) {
+    }else if (step === 2 && validateStep2()){
       setStep(3)
     }
   }
 
   const handlePrevious = () => {
-    if (step > 1) {
+    if(step > 1){
       setStep(step - 1)
       setErrors({})
     }
