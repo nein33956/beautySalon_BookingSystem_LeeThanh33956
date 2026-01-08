@@ -36,7 +36,6 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 
-
 fix bug: 
 1️⃣ Search chỉ gõ được 1 ký tự rồi bị văng focus
     Nguyên nhân

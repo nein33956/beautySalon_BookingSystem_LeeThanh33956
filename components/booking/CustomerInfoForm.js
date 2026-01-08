@@ -10,7 +10,6 @@ function CustomerInfoForm({ bookingData, setBookingData, services, errors, onNex
     e.preventDefault();
     onNext();
   };
-
   return (
     <div className="form-step">
       <h2>Customer information</h2>
