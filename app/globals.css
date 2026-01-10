@@ -1180,6 +1180,7 @@ html {
   padding: 40px 20px;
 }
 
+
 .services-header {
   text-align: center;
   margin-bottom: 40px;
@@ -1195,6 +1196,23 @@ html {
   color: #666;
   font-size: 1.1rem;
 }
+
+/* ===== SERVICES PAGE BACKGROUND ===== */
+
+
+.services-page {
+  min-height: 100vh;
+  background: linear-gradient(
+    180deg,
+    #faf7f5 0%,
+    #ffffff 100%
+  );
+}
+
+.services-page-container {
+  background: transparent !important;
+}
+
 
 /* Search Section */
 .search-section {

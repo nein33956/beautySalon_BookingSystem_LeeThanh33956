@@ -13,8 +13,10 @@ function BookingPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const preSelectedServiceId = searchParams.get('service')
-
   const [step, setStep] = useState(1)
+  const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
+  // app/booking/page.js - Update initial state
   const [bookingData, setBookingData] = useState({
     name: '',
     phone: '',
@@ -22,11 +24,9 @@ function BookingPageContent() {
     serviceId: null,
     date: '',
     time: '',
+    staffId: null, // ✅ NEW: Add staffId
     notes: ''
   })
-  const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(false)
-
   // const services = [
   //   { id: 1, name: 'Haircut', price: 200000, duration: 70 },
   //   { id: 2, name: 'Hair Coloring', price: 500000, duration: 120 },

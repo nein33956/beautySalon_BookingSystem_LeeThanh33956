@@ -92,3 +92,11 @@ fix bug:
         Summary cập nhật đúng
         Booking flow đi tiếp được
     ✅ ĐÃ FIX
+
+
+
+1. API: Get Available Staff
+2. Update: Available Slots API (check staff conflicts)
+3. Add: Staff Selector trong Booking Flow
+4. Update: BookingData state để lưu staffId
+5. Validate: Staff availability khi submit

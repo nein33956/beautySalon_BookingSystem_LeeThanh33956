@@ -99,7 +99,7 @@ export default function ServicesPage() {
   }
 
   return (
-    <div>
+    <div className="services-page">
       <Navbar />
       
       <main className="services-page-container">
