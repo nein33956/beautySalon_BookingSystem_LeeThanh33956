@@ -100,3 +100,24 @@ fix bug:
 3. Add: Staff Selector trong Booking Flow
 4. Update: BookingData state để lưu staffId
 5. Validate: Staff availability khi submit
+
+OPTION A: Hoàn thành Booking Submit ⭐ (Recommended)
+Goal: Customer có thể đặt lịch thành công!
+
+Tasks:
+1. Create API POST /api/bookings (save to database)
+2. Update booking/page.js handleConfirm()
+3. Test complete flow: Select → Confirm → Success
+4. Verify booking saved in Supabase
+
+Result: WORKING BOOKING SYSTEM! 🎉
+OPTION B: Tạo My Bookings Page
+Goal: Customer xem được lịch hẹn của mình
+
+Tasks:
+1. Create app/my-bookings/page.js
+2. API GET /api/bookings/my-bookings
+3. Display bookings list
+4. Add cancel button
+
+Result: Customer can view & manage bookings

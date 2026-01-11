@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase-browser'
 import BookingHeader from '@/components/booking/BookingHeader'
 import CustomerInfoForm from '@/components/booking/CustomerInfoForm'
 import DateTimeSelector from '@/components/booking/DateTimeSelector'
@@ -12,11 +13,10 @@ import { getAllServices } from '@/lib/services'
 function BookingPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const supabase = createClient()
   const preSelectedServiceId = searchParams.get('service')
+
   const [step, setStep] = useState(1)
-  const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(false)
-  // app/booking/page.js - Update initial state
   const [bookingData, setBookingData] = useState({
     name: '',
     phone: '',
@@ -24,21 +24,19 @@ function BookingPageContent() {
     serviceId: null,
     date: '',
     time: '',
-    staffId: null, // ✅ NEW: Add staffId
+    staffId: null,
     notes: ''
   })
-  // const services = [
-  //   { id: 1, name: 'Haircut', price: 200000, duration: 70 },
-  //   { id: 2, name: 'Hair Coloring', price: 500000, duration: 120 },
-  //   { id: 3, name: 'Hair Styling', price: 180000, duration: 75 },
-  //   { id: 4, name: 'Nail Art', price: 400000, duration: 100 },
-  //   { id: 5, name: 'Manicure & Pedicure', price: 300000, duration: 1200 },
-  //   { id: 6, name: 'Massage', price: 800000, duration: 1200 }
-  // ]
+  const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [submissionError, setSubmissionError] = useState('')
+
   const [services, setServices] = useState([])
+  const [userProfile, setUserProfile] = useState(null)
 
   useEffect(() => {
     fetchServices()
+    loadUserProfile()
   }, [])
 
   async function fetchServices() {
@@ -46,13 +44,35 @@ function BookingPageContent() {
     if (!error && data) {
       setServices(data)
     }
-}
+  }
+
+  async function loadUserProfile() {
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (session?.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, phone')
+        .eq('id', session.user.id)
+        .single()
+
+      if (profile) {
+        setUserProfile(profile)
+        setBookingData(prev => ({
+          ...prev,
+          name: profile.full_name || '',
+          phone: profile.phone || '',
+          email: session.user.email || ''
+        }))
+      }
+    }
+  }
 
   const currentService = services.find(s => s.id === bookingData.serviceId)
 
   useEffect(() => {
     if (preSelectedServiceId) {
-        setBookingData(prev => ({
+      setBookingData(prev => ({
         ...prev,
         serviceId: parseInt(preSelectedServiceId)
       }))
@@ -62,16 +82,16 @@ function BookingPageContent() {
   const validateStep1 = () => {
     const newErrors = {}
 
-    if(!bookingData.name || bookingData.name.trim().length < 2){
-      newErrors.name = 'Please enter your first and last name (at least 2 characters).'
+    if (!bookingData.name || bookingData.name.trim().length < 2) {
+      newErrors.name = 'Please enter your full name (at least 2 characters).'
     }
 
     const phoneRegex = /^[0-9]{10}$/
-    if(!phoneRegex.test(bookingData.phone)){
-      newErrors.phone = 'The phone number must have 10 digits.'
+    if (!phoneRegex.test(bookingData.phone)) {
+      newErrors.phone = 'Phone number must be 10 digits.'
     }
 
-    if(!bookingData.serviceId){
+    if (!bookingData.serviceId) {
       newErrors.serviceId = 'Please select a service'
     }
 
@@ -82,12 +102,12 @@ function BookingPageContent() {
   const validateStep2 = () => {
     const newErrors = {}
 
-    if(!bookingData.date){
-      newErrors.date = 'Please select date'
+    if (!bookingData.date) {
+      newErrors.date = 'Please select a date'
     }
 
-    if(!bookingData.time){
-      newErrors.time = 'Please select time'
+    if (!bookingData.time) {
+      newErrors.time = 'Please select a time'
     }
 
     setErrors(newErrors)
@@ -95,36 +115,62 @@ function BookingPageContent() {
   }
 
   const handleNext = () => {
-    if(step === 1 && validateStep1()){
+    if (step === 1 && validateStep1()) {
       setStep(2)
-    }else if (step === 2 && validateStep2()){
+    } else if (step === 2 && validateStep2()) {
       setStep(3)
     }
   }
 
   const handlePrevious = () => {
-    if(step > 1){
+    if (step > 1) {
       setStep(step - 1)
       setErrors({})
+      setSubmissionError('')
     }
   }
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    console.log('🚀 Submitting booking...')
     setLoading(true)
+    setSubmissionError('')
 
-    setTimeout(() => {
-      const bookings = JSON.parse(localStorage.getItem('bookings') || '[]')
-      const newBooking = {
-        ...bookingData,
-        service: currentService,
-        timestamp: new Date().toISOString()
+    try {
+      // Call API to create booking
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serviceId: bookingData.serviceId,
+          staffId: bookingData.staffId,
+          date: bookingData.date,
+          time: bookingData.time,
+          notes: bookingData.notes,
+          customerName: bookingData.name,
+          customerPhone: bookingData.phone,
+          customerEmail: bookingData.email
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create booking')
       }
-      bookings.push(newBooking)
-      localStorage.setItem('bookings', JSON.stringify(bookings))
 
+      console.log('✅ Booking created:', result.booking)
+
+      // Success - move to step 4
       setLoading(false)
       setStep(4)
-    }, 2000)
+
+    } catch (error) {
+      console.error('❌ Booking submission error:', error)
+      setSubmissionError(error.message || 'Failed to create booking. Please try again.')
+      setLoading(false)
+    }
   }
 
   const handleBackToHome = () => {
@@ -162,9 +208,21 @@ function BookingPageContent() {
             <h2>Confirm information</h2>
             <p className="subtitle">Please double check your booking information.</p>
 
+            {submissionError && (
+              <div style={{
+                padding: '15px',
+                background: '#fed7d7',
+                color: '#c53030',
+                borderRadius: '8px',
+                marginBottom: '20px',
+                border: '2px solid #fc8181'
+              }}>
+                <strong>⚠️ Error:</strong> {submissionError}
+              </div>
+            )}
+
             <BookingSummary
               bookingData={bookingData}
-              setBookingData={setBookingData}
               currentService={currentService}
               isConfirmation={true}
             />
@@ -187,7 +245,7 @@ function BookingPageContent() {
               >
                 {loading ? (
                   <>
-                    Loading... <span className="spinner-small"></span>
+                    Creating... <span className="spinner-small"></span>
                   </>
                 ) : (
                   'Confirm Booking'
@@ -227,7 +285,6 @@ function BookingPageContent() {
           <div className="booking-sidebar">
             <BookingSummary
               bookingData={bookingData}
-              setBookingData={setBookingData}
               currentService={currentService}
             />
           </div>

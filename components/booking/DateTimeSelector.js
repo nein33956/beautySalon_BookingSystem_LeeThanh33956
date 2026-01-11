@@ -8,62 +8,69 @@ function DateTimeSelector({ bookingData, setBookingData, currentService, errors,
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [slotsError, setSlotsError] = useState(null)
 
-  // Get today in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0]
 
-  // ✅ Fetch available slots from API when date/staff changes
   useEffect(() => {
     if (bookingData.date && currentService?.id) {
       fetchAvailableSlots()
     } else {
       setTimeSlots([])
+      setSlotsError(null)
     }
-  }, [bookingData.date, bookingData.staffId, currentService?.id]) // ✅ Added staffId dependency
+  }, [bookingData.date, bookingData.staffId, currentService?.id])
 
   async function fetchAvailableSlots() {
     try {
       setLoadingSlots(true)
       setSlotsError(null)
 
-      // ✅ Include staffId in API call if staff is selected
       let url = `/api/bookings/available-slots?date=${bookingData.date}&serviceId=${currentService.id}`
       if (bookingData.staffId) {
         url += `&staffId=${bookingData.staffId}`
       }
 
+      console.log('🔍 Fetching slots:', url)
+
       const response = await fetch(url)
 
       if (!response.ok) {
-        throw new Error('Failed to fetch available slots')
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data = await response.json()
-      setTimeSlots(data.availableSlots || [])
+      console.log('📊 Slots response:', data)
 
-      // If no slots available
-      if (data.availableSlots.length === 0) {
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      const slots = data.availableSlots || []
+      console.log('✅ Available slots:', slots)
+      
+      setTimeSlots(slots)
+
+      if (slots.length === 0) {
         setSlotsError('No available time slots for this date. Please choose another date.')
       }
+
     } catch (error) {
-      console.error('Error fetching slots:', error)
-      setSlotsError('Failed to load available time slots. Please try again.')
+      console.error('❌ Error fetching slots:', error)
+      setSlotsError(error.message || 'Failed to load available time slots. Please try again.')
       setTimeSlots([])
     } finally {
       setLoadingSlots(false)
     }
   }
 
-  // Handle date change
   const handleDateChange = (e) => {
     const selectedDate = e.target.value
     setBookingData(prev => ({
       ...prev,
       date: selectedDate,
-      time: '' // Reset time when date changes
+      time: ''
     }))
   }
 
-  // Handle time selection
   const handleTimeSelect = (time) => {
     setBookingData(prev => ({
       ...prev,
@@ -121,48 +128,87 @@ function DateTimeSelector({ bookingData, setBookingData, currentService, errors,
 
             {/* Loading State */}
             {loadingSlots && (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#8B5CF6' }}>
-                <div className="spinner" style={{ margin: '0 auto 10px' }}></div>
-                <p>Loading available time slots...</p>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '30px 20px',
+                background: '#f7fafc',
+                borderRadius: '12px',
+                marginTop: '10px'
+              }}>
+                <div className="spinner" style={{ 
+                  margin: '0 auto 15px',
+                  width: '40px',
+                  height: '40px'
+                }}></div>
+                <p style={{ color: '#8B5CF6', fontWeight: '600' }}>
+                  Loading available time slots...
+                </p>
               </div>
             )}
 
             {/* Error State */}
             {slotsError && !loadingSlots && (
               <div style={{ 
-                padding: '15px', 
+                padding: '20px', 
                 background: '#fed7d7', 
                 color: '#c53030',
-                borderRadius: '8px',
-                marginTop: '10px'
+                borderRadius: '12px',
+                marginTop: '10px',
+                border: '2px solid #fc8181'
               }}>
-                {slotsError}
+                <strong>⚠️ {slotsError}</strong>
+                {timeSlots.length === 0 && (
+                  <p style={{ marginTop: '10px', fontSize: '0.9rem' }}>
+                    Try selecting a different date or check back later.
+                  </p>
+                )}
               </div>
             )}
 
             {/* Time Slots Grid */}
             {!loadingSlots && !slotsError && timeSlots.length > 0 && (
-              <div className="time-slots-grid">
-                {timeSlots.map(time => {
-                  const selected = bookingData.time === time
+              <>
+                <p style={{ 
+                  fontSize: '0.9rem', 
+                  color: '#48bb78', 
+                  marginTop: '10px',
+                  fontWeight: '600'
+                }}>
+                  ✅ {timeSlots.length} time slot{timeSlots.length > 1 ? 's' : ''} available
+                </p>
+                <div className="time-slots-grid" style={{ marginTop: '15px' }}>
+                  {timeSlots.map(time => {
+                    const selected = bookingData.time === time
 
-                  return (
-                    <button
-                      key={time}
-                      type="button"
-                      className={`time-slot ${selected ? 'selected' : ''}`}
-                      onClick={() => handleTimeSelect(time)}
-                      title="Click to select"
-                    >
-                      {time}
-                    </button>
-                  )
-                })}
-              </div>
+                    return (
+                      <button
+                        key={time}
+                        type="button"
+                        className={`time-slot ${selected ? 'selected' : ''}`}
+                        onClick={() => handleTimeSelect(time)}
+                        title="Click to select"
+                      >
+                        {time}
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
             )}
 
             {errors.time && <span className="error-message">{errors.time}</span>}
           </div>
+        )}
+
+        {/* Staff Selector */}
+        {bookingData.date && bookingData.time && (
+          <StaffSelector
+            bookingData={bookingData}
+            setBookingData={setBookingData}
+            currentService={currentService}
+            selectedDate={bookingData.date}
+            selectedTime={bookingData.time}
+          />
         )}
 
         {/* Notes */}
@@ -176,17 +222,6 @@ function DateTimeSelector({ bookingData, setBookingData, currentService, errors,
             rows="3"
           />
         </div>
-
-        {/* ✅ NEW: Staff Selector */}
-        {bookingData.date && bookingData.time && (
-          <StaffSelector
-            bookingData={bookingData}
-            setBookingData={setBookingData}
-            currentService={currentService}
-            selectedDate={bookingData.date}
-            selectedTime={bookingData.time}
-          />
-        )}
 
         {/* Actions */}
         <div className="form-actions">
