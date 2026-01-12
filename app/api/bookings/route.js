@@ -1,34 +1,69 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-)
+// app/api/bookings/route.js
+import { NextResponse } from 'next/server'
+// import { createClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+
+
 
 /**
- * GET /api/bookings - Get all bookings (for admin)
+ * GET /api/bookings - Get all bookings for current user
  */
 export async function GET(request) {
   try {
-    const { data, error } = await supabase
+    const supabase = createClient()
+    
+    // Check authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+    
+    // Get query parameters
+    const { searchParams } = new URL(request.url)
+    const upcoming = searchParams.get('upcoming')
+    
+    // Build query
+    let query = supabase
       .from('bookings')
       .select(`
         *,
-        customer:customers(id),
-        service:services(name, duration, price),
-        staff:staff(name, specialization)
+        service:services(id, name, duration, price, category),
+        staff:staff(id, name, specialization, avatar_url)
       `)
+      .eq('customer_id', user.id)
       .order('booking_date', { ascending: false })
       .order('start_time', { ascending: false })
-
-    if (error) throw error
-
-    return NextResponse.json({ bookings: data })
+    
+    // Filter upcoming bookings
+    if (upcoming === 'true') {
+      const today = new Date().toISOString().split('T')[0]
+      query = query.gte('booking_date', today)
+    }
+    
+    const { data, error } = await query
+    
+    if (error) {
+      console.error('Error fetching bookings:', error)
+      throw error
+    }
+    
+    return NextResponse.json({ 
+      success: true,
+      bookings: data || [] 
+    })
+    
   } catch (error) {
-    console.error('Error fetching bookings:', error)
+    console.error('GET bookings error:', error)
     return NextResponse.json(
-      { error: error.message },
+      { error: 'Failed to fetch bookings: ' + error.message },
       { status: 500 }
     )
   }
@@ -40,7 +75,37 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     console.log('📍 Creating new booking...')
+    const cookieStore = cookies() // ✅ PHẢI gọi ()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY,
+      {
+        cookies: {
+          get(name) {
+            return cookieStore.get(name)?.value
+          }
+        }
+      }
+    )
+
+
+    console.log('✅ User authenticated:', user.id)
     
+    // 1. Check authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      console.error('❌ Authentication error:', authError)
+      return NextResponse.json(
+        { error: 'Authentication required. Please login first.' },
+        { status: 401 }
+      )
+    }
+    
+    const userId = user.id
+    console.log('👤 User ID:', userId)
+    
+    // 2. Parse request body
     const body = await request.json()
     const { 
       serviceId, 
@@ -52,66 +117,129 @@ export async function POST(request) {
       customerPhone,
       customerEmail 
     } = body
-
-    console.log('📋 Booking data:', { serviceId, staffId, date, time, customerName })
-
-    // 1. Validate required fields
+    
+    console.log('📋 Booking data:', { 
+      serviceId, 
+      staffId, 
+      date, 
+      time, 
+      customerName,
+      customerPhone 
+    })
+    
+    // 3. Validate required fields
     if (!serviceId || !date || !time || !customerName || !customerPhone) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { 
+          error: 'Missing required fields',
+          missing: {
+            serviceId: !serviceId,
+            date: !date,
+            time: !time,
+            customerName: !customerName,
+            customerPhone: !customerPhone
+          }
+        },
         { status: 400 }
       )
     }
-
-    // 2. Get authenticated user
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (sessionError || !session) {
+    // 4. Check if profile exists
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, full_name, phone')
+      .eq('id', userId)
+      .single()
+    
+    if (profileError || !profile) {
+      console.error('❌ Profile not found:', profileError)
       return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
+        { error: 'Profile not found. Please complete your profile first.' },
+        { status: 404 }
       )
     }
-
-    const userId = session.user.id
-    console.log('👤 User ID:', userId)
-
-    // 3. Get service details
+    
+    // 5. Update profile with latest info (if changed)
+    if (customerName !== profile.full_name || customerPhone !== profile.phone) {
+      console.log('📝 Updating profile info...')
+      await supabase
+        .from('profiles')
+        .update({
+          full_name: customerName,
+          phone: customerPhone
+        })
+        .eq('id', userId)
+    }
+    
+    // 6. Get service details
     const { data: service, error: serviceError } = await supabase
       .from('services')
-      .select('name, duration, price')
+      .select('id, name, duration, price, is_active')
       .eq('id', serviceId)
       .single()
-
+    
     if (serviceError || !service) {
-      console.error('Service fetch error:', serviceError)
+      console.error('❌ Service fetch error:', serviceError)
       return NextResponse.json(
         { error: 'Service not found' },
         { status: 404 }
       )
     }
-
+    
+    if (!service.is_active) {
+      return NextResponse.json(
+        { error: 'This service is not available' },
+        { status: 400 }
+      )
+    }
+    
     console.log('✅ Service:', service.name, service.duration, 'mins')
-
-    // 4. Calculate end_time based on duration
+    
+    // 7. Calculate end_time based on duration
     const [hours, minutes] = time.split(':').map(Number)
     const startMinutes = hours * 60 + minutes
     const endMinutes = startMinutes + service.duration
     const endHours = Math.floor(endMinutes / 60)
     const endMins = endMinutes % 60
     const endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`
-
+    
     console.log('⏰ Time:', time, '->', endTime)
-
-    // 5. Check for conflicts (same staff, overlapping time)
+    
+    // 8. Check staff availability (if staff selected)
     if (staffId) {
-      const { data: conflicts } = await supabase
+      const { data: staff, error: staffError } = await supabase
+        .from('staff')
+        .select('id, name, is_available')
+        .eq('id', staffId)
+        .single()
+      
+      if (staffError || !staff) {
+        console.error('❌ Staff not found:', staffError)
+        return NextResponse.json(
+          { error: 'Staff not found' },
+          { status: 404 }
+        )
+      }
+      
+      if (!staff.is_available) {
+        return NextResponse.json(
+          { error: 'This staff member is not available' },
+          { status: 400 }
+        )
+      }
+      
+      // 9. Check for time conflicts
+      const { data: conflicts, error: conflictError } = await supabase
         .from('bookings')
         .select('id, start_time, end_time')
         .eq('staff_id', staffId)
         .eq('booking_date', date)
         .in('status', ['pending', 'confirmed'])
-
+      
+      if (conflictError) {
+        console.error('⚠️ Conflict check error:', conflictError)
+      }
+      
       if (conflicts && conflicts.length > 0) {
         // Check if any booking overlaps with our time slot
         const hasConflict = conflicts.some(booking => {
@@ -119,22 +247,29 @@ export async function POST(request) {
           const bookingEnd = timeToMinutes(booking.end_time)
           const newStart = startMinutes
           const newEnd = endMinutes
-
-          // Check overlap: new booking starts before existing ends AND new ends after existing starts
+          
+          // Check overlap
           return (newStart < bookingEnd && newEnd > bookingStart)
         })
-
+        
         if (hasConflict) {
           console.log('❌ Time slot conflict detected')
           return NextResponse.json(
-            { error: 'This time slot is no longer available. Please select another time.' },
+            { 
+              error: 'Time slot is not available',
+              details: 'This staff member already has a booking during this time. Please select another time or staff member.',
+              conflicts: conflicts.map(c => ({
+                start: c.start_time,
+                end: c.end_time
+              }))
+            },
             { status: 409 }
           )
         }
       }
     }
-
-    // 6. Create booking record
+    
+    // 10. Create booking record
     const bookingRecord = {
       customer_id: userId,
       service_id: serviceId,
@@ -147,19 +282,20 @@ export async function POST(request) {
       notes: notes || null,
       created_at: new Date().toISOString()
     }
-
-    console.log('💾 Saving booking:', bookingRecord)
-
+    
+    console.log('💾 Saving booking to database...')
+    
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .insert(bookingRecord)
       .select(`
         *,
-        service:services(name, duration, price, category),
-        staff:staff(name, specialization)
+        service:services(id, name, duration, price, category),
+        staff:staff(id, name, specialization),
+        customer:profiles(id, full_name, phone)
       `)
       .single()
-
+    
     if (bookingError) {
       console.error('❌ Booking insert error:', bookingError)
       return NextResponse.json(
@@ -167,26 +303,27 @@ export async function POST(request) {
         { status: 500 }
       )
     }
-
-    console.log('✅ Booking created:', booking.id)
-
-    // 7. Return success with booking details
+    
+    console.log('✅ Booking created successfully:', booking.id)
+    
+    // 11. Return success response
     return NextResponse.json({
       success: true,
+      message: 'Booking created successfully!',
       booking: {
         id: booking.id,
         service: booking.service,
         staff: booking.staff,
+        customer: booking.customer,
         date: booking.booking_date,
         time: booking.start_time,
         endTime: booking.end_time,
         price: booking.total_price,
         status: booking.status,
         notes: booking.notes
-      },
-      message: 'Booking created successfully!'
+      }
     }, { status: 201 })
-
+    
   } catch (error) {
     console.error('❌ Booking API error:', error)
     return NextResponse.json(
@@ -196,7 +333,7 @@ export async function POST(request) {
   }
 }
 
-// Helper function
+// Helper function to convert time string to minutes
 function timeToMinutes(time) {
   const [hours, mins] = time.split(':').map(Number)
   return hours * 60 + (mins || 0)
