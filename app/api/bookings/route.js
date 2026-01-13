@@ -77,6 +77,7 @@ export async function GET(request) {
   }
 }
 
+
 /**
  * POST /api/bookings - Create new booking
  */

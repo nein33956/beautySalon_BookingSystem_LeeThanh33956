@@ -101,8 +101,8 @@ fix bug:
 4. Update: BookingData state để lưu staffId
 5. Validate: Staff availability khi submit
 
-OPTION A: Hoàn thành Booking Submit ⭐ (Recommended)
-Goal: Customer có thể đặt lịch thành công!
+Hoàn thành Booking Submit 
+Goal: Customer có thể đặt lịch
 
 Tasks:
 1. Create API POST /api/bookings (save to database)
@@ -110,8 +110,11 @@ Tasks:
 3. Test complete flow: Select → Confirm → Success
 4. Verify booking saved in Supabase
 
-Result: WORKING BOOKING SYSTEM! 🎉
-OPTION B: Tạo My Bookings Page
+Result: WORKING BOOKING SYSTEM!
+
+
+
+Tạo My Bookings Page
 Goal: Customer xem được lịch hẹn của mình
 
 Tasks:
