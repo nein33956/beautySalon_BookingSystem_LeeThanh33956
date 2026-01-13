@@ -1,122 +1,156 @@
-// app/my-bookings/page.js
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase-browser'
 
 const STATUS_CONFIG = {
   pending: {
-    label: 'Chờ xác nhận',
+    label: 'Pending',
     color: 'bg-yellow-100 text-yellow-800 border-yellow-300',
     icon: '⏳'
   },
   confirmed: {
-    label: 'Đã xác nhận',
+    label: 'Confirmed',
     color: 'bg-green-100 text-green-800 border-green-300',
     icon: '✓'
   },
   completed: {
-    label: 'Hoàn thành',
+    label: 'Completed',
     color: 'bg-blue-100 text-blue-800 border-blue-300',
     icon: '✓✓'
   },
   cancelled: {
-    label: 'Đã hủy',
+    label: 'Cancelled',
     color: 'bg-red-100 text-red-800 border-red-300',
     icon: '✗'
   }
-};
+}
 
 export default function MyBookingsPage() {
-  const router = useRouter();
-  const [bookings, setBookings] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, upcoming, past
-  const [error, setError] = useState(null);
+  const router = useRouter()
+  const supabase = createClient()
+  
+  const [bookings, setBookings] = useState([])
+  const [filteredBookings, setFilteredBookings] = useState([])
+  const [filter, setFilter] = useState('all') // all, upcoming, past
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    fetchBookings();
-  }, [filter]);
+    fetchBookings()
+  }, [])
+
+  useEffect(() => {
+    applyFilter()
+  }, [filter, bookings])
 
   const fetchBookings = async () => {
     try {
-      setIsLoading(true);
-      setError(null);
+      setIsLoading(true)
+      setError(null)
       
-      const params = new URLSearchParams();
-      if (filter === 'upcoming') {
-        params.append('upcoming', 'true');
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/login')
+        return
       }
-      
-      const response = await fetch(`/api/bookings?${params}`);
-      const data = await response.json();
+
+      const response = await fetch('/api/bookings')
+      const data = await response.json()
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch bookings');
+        throw new Error(data.error || 'Failed to fetch bookings')
       }
       
-      if (data.success) {
-        let filteredBookings = data.bookings || [];
-        
-        // Client-side filtering for past bookings
-        if (filter === 'past') {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          filteredBookings = filteredBookings.filter(b => 
-            new Date(b.booking_date) < today
-          );
-        }
-        
-        setBookings(filteredBookings);
-      }
+      setBookings(data.bookings || [])
     } catch (err) {
-      setError(err.message);
-      console.error('Fetch bookings error:', err);
+      setError(err.message)
+      console.error('Fetch bookings error:', err)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
+
+  const applyFilter = () => {
+    if (filter === 'all') {
+      setFilteredBookings(bookings)
+      return
+    }
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const filtered = bookings.filter(booking => {
+      const bookingDate = new Date(booking.booking_date)
+      bookingDate.setHours(0, 0, 0, 0)
+
+      if (filter === 'upcoming') {
+        return bookingDate >= today && 
+               (booking.status === 'pending' || booking.status === 'confirmed')
+      } else if (filter === 'past') {
+        return bookingDate < today || 
+               booking.status === 'completed' || 
+               booking.status === 'cancelled'
+      }
+      return true
+    })
+
+    setFilteredBookings(filtered)
+  }
 
   const handleCancelBooking = async (bookingId) => {
-    if (!confirm('Bạn có chắc muốn hủy lịch hẹn này?')) return;
+    if (!confirm('Are you sure you want to cancel this booking?')) return
     
     try {
       const response = await fetch(`/api/bookings/${bookingId}/cancel`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cancel_reason: 'Khách hàng hủy'
+          cancel_reason: 'Customer cancelled'
         })
-      });
+      })
       
-      const data = await response.json();
+      const data = await response.json()
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to cancel booking');
+        throw new Error(data.error || 'Failed to cancel booking')
       }
       
-      alert('Hủy lịch thành công!');
-      fetchBookings(); // Refresh list
+      alert('Booking cancelled successfully!')
+      fetchBookings() // Refresh list
     } catch (err) {
-      alert(`Lỗi: ${err.message}`);
+      alert(`Error: ${err.message}`)
     }
-  };
+  }
 
   const canCancelBooking = (booking) => {
     if (booking.status !== 'pending' && booking.status !== 'confirmed') {
-      return false;
+      return false
     }
     
     // Check if booking is at least 2 hours away
-    const bookingDateTime = new Date(`${booking.booking_date}T${booking.start_time}`);
-    const now = new Date();
-    const hoursUntilBooking = (bookingDateTime - now) / (1000 * 60 * 60);
+    const bookingDateTime = new Date(`${booking.booking_date}T${booking.start_time}`)
+    const now = new Date()
+    const hoursUntilBooking = (bookingDateTime - now) / (1000 * 60 * 60)
     
-    return hoursUntilBooking > 2;
-  };
+    return hoursUntilBooking > 2
+  }
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+  }
+
+  const formatTime = (timeString) => {
+    return timeString.substring(0, 5) // "10:00:00" -> "10:00"
+  }
 
   if (isLoading) {
     return (
@@ -124,11 +158,11 @@ export default function MyBookingsPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Đang tải lịch hẹn...</p>
+            <p className="text-gray-600">Loading bookings...</p>
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -137,10 +171,10 @@ export default function MyBookingsPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Lịch hẹn của tôi 📅
+            My Bookings 📅
           </h1>
           <p className="text-gray-600">
-            Quản lý tất cả các lịch hẹn của bạn
+            Manage all your appointments
           </p>
         </div>
 
@@ -155,7 +189,7 @@ export default function MyBookingsPage() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Tất cả
+              All ({bookings.length})
             </button>
             <button
               onClick={() => setFilter('upcoming')}
@@ -165,7 +199,7 @@ export default function MyBookingsPage() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Sắp tới
+              Upcoming
             </button>
             <button
               onClick={() => setFilter('past')}
@@ -175,7 +209,7 @@ export default function MyBookingsPage() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Đã qua
+              Past
             </button>
           </div>
         </div>
@@ -188,27 +222,28 @@ export default function MyBookingsPage() {
         )}
 
         {/* Bookings List */}
-        {bookings.length === 0 ? (
+        {filteredBookings.length === 0 ? (
           <div className="bg-white rounded-xl shadow-md p-12 text-center">
             <div className="text-6xl mb-4">📭</div>
             <h3 className="text-2xl font-bold text-gray-800 mb-2">
-              Chưa có lịch hẹn nào
+              No bookings found
             </h3>
             <p className="text-gray-600 mb-6">
-              Bạn chưa có lịch hẹn nào. Đặt lịch ngay để trải nghiệm dịch vụ của chúng tôi!
+              {filter === 'all' 
+                ? "You don't have any bookings yet. Book your first appointment!"
+                : `No ${filter} bookings found.`}
             </p>
             <Link
               href="/booking"
               className="inline-block px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg font-semibold hover:from-pink-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
             >
-              Đặt lịch ngay
+              Book Now
             </Link>
           </div>
         ) : (
           <div className="space-y-4">
-            {bookings.map((booking) => {
-              const statusConfig = STATUS_CONFIG[booking.status] || STATUS_CONFIG.pending;
-              const formattedDate = format(new Date(booking.booking_date), 'EEEE, dd/MM/yyyy', { locale: vi });
+            {filteredBookings.map((booking) => {
+              const statusConfig = STATUS_CONFIG[booking.status] || STATUS_CONFIG.pending
               
               return (
                 <div
@@ -226,7 +261,7 @@ export default function MyBookingsPage() {
                             {statusConfig.icon} {statusConfig.label}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-500">Mã: #{booking.id}</p>
+                        <p className="text-sm text-gray-500">Booking ID: #{booking.id.substring(0, 8)}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-2xl font-bold text-pink-600">
@@ -240,10 +275,12 @@ export default function MyBookingsPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">📅</span>
                         <div>
-                          <p className="text-sm text-gray-500">Ngày & Giờ</p>
-                          <p className="font-semibold text-gray-900">{formattedDate}</p>
+                          <p className="text-sm text-gray-500">Date & Time</p>
+                          <p className="font-semibold text-gray-900">
+                            {formatDate(booking.booking_date)}
+                          </p>
                           <p className="text-sm text-gray-600">
-                            {booking.start_time} - {booking.end_time}
+                            {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                           </p>
                         </div>
                       </div>
@@ -252,9 +289,9 @@ export default function MyBookingsPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">👤</span>
                         <div>
-                          <p className="text-sm text-gray-500">Nhân viên</p>
+                          <p className="text-sm text-gray-500">Staff</p>
                           <p className="font-semibold text-gray-900">
-                            {booking.staff?.name || 'Bất kỳ'}
+                            {booking.staff?.name || 'Any available'}
                           </p>
                           {booking.staff?.specialization && (
                             <p className="text-sm text-gray-600">{booking.staff.specialization}</p>
@@ -266,9 +303,9 @@ export default function MyBookingsPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">⏱️</span>
                         <div>
-                          <p className="text-sm text-gray-500">Thời lượng</p>
+                          <p className="text-sm text-gray-500">Duration</p>
                           <p className="font-semibold text-gray-900">
-                            {booking.service?.duration} phút
+                            {booking.service?.duration} minutes
                           </p>
                           <p className="text-sm text-gray-600">{booking.service?.category}</p>
                         </div>
@@ -278,7 +315,7 @@ export default function MyBookingsPage() {
                     {/* Notes */}
                     {booking.notes && (
                       <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                        <p className="text-sm text-gray-500 mb-1">💬 Ghi chú:</p>
+                        <p className="text-sm text-gray-500 mb-1">💬 Notes:</p>
                         <p className="text-gray-700">{booking.notes}</p>
                       </div>
                     )}
@@ -289,7 +326,7 @@ export default function MyBookingsPage() {
                         href={`/my-bookings/${booking.id}`}
                         className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-center font-medium hover:bg-gray-200 transition-colors"
                       >
-                        Xem chi tiết
+                        View Details
                       </Link>
                       
                       {canCancelBooking(booking) && (
@@ -297,13 +334,13 @@ export default function MyBookingsPage() {
                           onClick={() => handleCancelBooking(booking.id)}
                           className="flex-1 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition-colors"
                         >
-                          Hủy lịch
+                          Cancel Booking
                         </button>
                       )}
                     </div>
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
         )}
@@ -314,10 +351,10 @@ export default function MyBookingsPage() {
             href="/booking"
             className="inline-block px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl font-semibold hover:from-pink-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
           >
-            + Đặt lịch mới
+            + Book New Appointment
           </Link>
         </div>
       </div>
     </div>
-  );
+  )
 }

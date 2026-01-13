@@ -89,7 +89,6 @@ export default function BookingSummary({ bookingData, onEdit, onConfirm, isSubmi
   if (!service || !selectedDate || !selectedTime) {
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-        <p className="text-yellow-800">Vui lòng hoàn tất các bước trước</p>
       </div>
     );
   }

@@ -4,7 +4,7 @@
 
 .booking-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, #B3446C 0%, #008292 100%);
 }
 
 /* ============================================
@@ -22,8 +22,9 @@
 .back-btn {
   background: none;
   border: none;
-  color: #667eea;
-  font-size: 1rem;
+  color: #060918;
+  font-size: 2rem;
+  font-style: bold;
   font-weight: 600;
   cursor: pointer;
   padding: 8px 16px;
@@ -120,7 +121,7 @@
 }
 
 .booking-content {
-  background: white;
+  background: #E3CCDC;
   border-radius: 16px;
   padding: 40px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);

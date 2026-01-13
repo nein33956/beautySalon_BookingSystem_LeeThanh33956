@@ -1,11 +1,7 @@
-
 // app/api/bookings/route.js
 import { NextResponse } from 'next/server'
-// import { createClient } from '@/lib/supabase-server'
-import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-
 
 
 
@@ -14,14 +10,26 @@ import { cookies } from 'next/headers'
  */
 export async function GET(request) {
   try {
-    const supabase = createClient()
+    // const supabase = await getSupabaseServer()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          async get(name) {
+            const cookieStore = await cookies()
+            return cookieStore.get(name)?.value
+          }
+        }
+      }
+    )
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized. Please login first.' },
         { status: 401 }
       )
     }
@@ -75,21 +83,22 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     console.log('📍 Creating new booking...')
-    const cookieStore = cookies() // ✅ PHẢI gọi ()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
         cookies: {
-          get(name) {
+          async get(name) {
+            const cookieStore = await cookies()
             return cookieStore.get(name)?.value
           }
         }
       }
     )
 
-
-    console.log('✅ User authenticated:', user.id)
+    
+    
+    // const supabase = getSupabaseServer()
     
     // 1. Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -241,14 +250,12 @@ export async function POST(request) {
       }
       
       if (conflicts && conflicts.length > 0) {
-        // Check if any booking overlaps with our time slot
         const hasConflict = conflicts.some(booking => {
           const bookingStart = timeToMinutes(booking.start_time)
           const bookingEnd = timeToMinutes(booking.end_time)
           const newStart = startMinutes
           const newEnd = endMinutes
           
-          // Check overlap
           return (newStart < bookingEnd && newEnd > bookingStart)
         })
         
@@ -257,7 +264,7 @@ export async function POST(request) {
           return NextResponse.json(
             { 
               error: 'Time slot is not available',
-              details: 'This staff member already has a booking during this time. Please select another time or staff member.',
+              details: 'This staff member already has a booking during this time.',
               conflicts: conflicts.map(c => ({
                 start: c.start_time,
                 end: c.end_time
@@ -291,8 +298,7 @@ export async function POST(request) {
       .select(`
         *,
         service:services(id, name, duration, price, category),
-        staff:staff(id, name, specialization),
-        customer:profiles(id, full_name, phone)
+        staff:staff(id, name, specialization)
       `)
       .single()
     
@@ -333,7 +339,7 @@ export async function POST(request) {
   }
 }
 
-// Helper function to convert time string to minutes
+// Helper function
 function timeToMinutes(time) {
   const [hours, mins] = time.split(':').map(Number)
   return hours * 60 + (mins || 0)

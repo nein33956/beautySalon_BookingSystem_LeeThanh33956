@@ -130,18 +130,25 @@ function BookingPageContent() {
     }
   }
 
+ 
   const handleConfirm = async () => {
     console.log('🚀 Submitting booking...')
     setLoading(true)
     setSubmissionError('')
 
     try {
+      // ✅ DÙNG getUser() – KHÔNG DÙNG session
+      const { data: { user }, error } = await supabase.auth.getUser()
+
+      if (error || !user) {
+      throw new Error('Authentication required. Please login first.')
+    }
+
+      console.log('👤 User logged in:', user.id)
       // Call API to create booking
       const response = await fetch('/api/bookings', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serviceId: bookingData.serviceId,
           staffId: bookingData.staffId,
@@ -161,17 +168,19 @@ function BookingPageContent() {
       }
 
       console.log('✅ Booking created:', result.booking)
-
-      // Success - move to step 4
-      setLoading(false)
+      // Success
       setStep(4)
 
     } catch (error) {
       console.error('❌ Booking submission error:', error)
-      setSubmissionError(error.message || 'Failed to create booking. Please try again.')
+      setSubmissionError(
+        error.message || 'Failed to create booking. Please try again.'
+      )
+    } finally {
       setLoading(false)
     }
   }
+
 
   const handleBackToHome = () => {
     router.push('/')
