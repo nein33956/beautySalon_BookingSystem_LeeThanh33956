@@ -5,10 +5,10 @@ import { createClient } from '@/lib/supabase-server'
 /**
  * GET /api/bookings/[id] - Get a single booking by ID
  */
-export async function GET(request, { params }) {
+export async function GET(request, context) {
   try {
     const supabase = createClient()
-    const { id } = params
+    const { id } = await context.params
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -59,10 +59,10 @@ export async function GET(request, { params }) {
  * PATCH /api/bookings/[id] - Update a booking
  * (For future use - admin updates or customer reschedule)
  */
-export async function PATCH(request, { params }) {
+export async function PATCH(request, context) {
   try {
     const supabase = createClient()
-    const { id } = params
+    const { id } = await context.params
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -154,10 +154,10 @@ export async function PATCH(request, { params }) {
  * DELETE /api/bookings/[id] - Delete a booking
  * (Admin only - customer should use cancel endpoint)
  */
-export async function DELETE(request, { params }) {
+export async function DELETE(request, context) {
   try {
     const supabase = createClient()
-    const { id } = params
+    const { id } = await context.params
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
