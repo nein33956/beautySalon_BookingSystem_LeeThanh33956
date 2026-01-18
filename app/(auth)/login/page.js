@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState } from 'react'
@@ -58,13 +57,36 @@ export default function LoginPage() {
         throw new Error('Session not persisted!')
       }
 
+      // ✅ GET USER ROLE
+      console.log('📋 Fetching user role...')
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, full_name')
+        .eq('id', data.user.id)
+        .single()
+      
+      if (profileError) {
+        console.error('⚠️ Profile fetch error:', profileError)
+      }
+
+      const userRole = profile?.role || 'customer'
+      console.log('👤 User role:', userRole)
+      console.log('👤 User name:', profile?.full_name)
+
       // ✅ Small delay to ensure cookies are written
       await new Promise(resolve => setTimeout(resolve, 500))
       
-      console.log('🔀 Redirecting to /')
-      
-      // Force a full page reload to ensure middleware picks up new cookies
-      window.location.href = '/'
+      // ✅ REDIRECT BASED ON ROLE
+      if (userRole === 'admin') {
+        console.log('👑 Admin detected → Redirecting to /admin')
+        window.location.href = '/admin'
+      } else if (userRole === 'staff') {
+        console.log('👨‍💼 Staff detected → Redirecting to /staff')
+        window.location.href = '/staff'
+      } else {
+        console.log('🛍️ Customer detected → Redirecting to /my-bookings')
+        window.location.href = '/my-bookings'
+      }
       
     } catch (err) {
       console.error('❌ Login error:', err)

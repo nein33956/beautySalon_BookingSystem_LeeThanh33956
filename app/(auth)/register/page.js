@@ -1,4 +1,4 @@
-
+//app/%28auth%29/register/page.js
 'use client'
 
 import { useState } from 'react'

@@ -46,7 +46,7 @@ export default function MyBookingsPage() {
   
   const [bookings, setBookings] = useState([])
   const [filteredBookings, setFilteredBookings] = useState([])
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState('active') // Default to 'active' (hide cancelled)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [cancellingId, setCancellingId] = useState(null)
@@ -75,8 +75,8 @@ export default function MyBookingsPage() {
         .from('bookings')
         .select(`
           *,
-          service:services(id, name, duration, price, category, image_url),
-          staff:staff(id, name, specialization, avatar_url)
+          services!inner(id, name, duration, price, category, image_url),
+          staff(id, name, specialization, avatar_url)
         `)
         .eq('customer_id', user.id)
         .order('booking_date', { ascending: false })
@@ -84,7 +84,14 @@ export default function MyBookingsPage() {
       
       if (fetchError) throw fetchError
       
-      setBookings(bookingsData || [])
+      // Transform data to match expected format
+      const transformedData = bookingsData?.map(booking => ({
+        ...booking,
+        service: booking.services,
+        services: undefined
+      })) || []
+      
+      setBookings(transformedData)
     } catch (err) {
       setError(err.message)
       console.error('Fetch bookings error:', err)
@@ -94,25 +101,27 @@ export default function MyBookingsPage() {
   }
 
   const applyFilter = () => {
+    const now = new Date()
+    
     if (filter === 'all') {
       setFilteredBookings(bookings)
       return
     }
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
     const filtered = bookings.filter(booking => {
-      const bookingDate = new Date(booking.booking_date)
-      bookingDate.setHours(0, 0, 0, 0)
+      const bookingDateTime = new Date(`${booking.booking_date}T${booking.start_time}`)
+      const isPast = bookingDateTime < now
+      const isActive = (booking.status === 'pending' || booking.status === 'confirmed')
 
-      if (filter === 'upcoming') {
-        return bookingDate >= today && 
-               (booking.status === 'pending' || booking.status === 'confirmed')
+      if (filter === 'active') {
+        // Only show active bookings in the future
+        return isActive && !isPast
+      } else if (filter === 'upcoming') {
+        // Show pending/confirmed bookings in the future
+        return isActive && !isPast
       } else if (filter === 'past') {
-        return bookingDate < today || 
-               booking.status === 'completed' || 
-               booking.status === 'cancelled'
+        // Show past bookings OR completed/cancelled
+        return isPast || booking.status === 'completed' || booking.status === 'cancelled'
       }
       return true
     })
@@ -180,7 +189,7 @@ export default function MyBookingsPage() {
     return (
       <div style={{ 
         minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #32127A 0%, #B3446C 50%, #E3CCDC 100%)',
+        background: 'linear-gradient(135deg, #fdf2f8 0%, #fae8ff 50%, #ede9fe 100%)',
         padding: '3rem 1rem'
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
@@ -209,7 +218,7 @@ export default function MyBookingsPage() {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #1D5A6E 0%, #4FB3B3 50%, #E3CCDC 100%)',
+      background: 'linear-gradient(135deg, #B3446C 0%, #E3CCDC 50%, #008292 100%)',
       padding: '3rem 1rem'
     }}>
       <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
@@ -222,21 +231,21 @@ export default function MyBookingsPage() {
               fontWeight: 'bold',
               background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
               WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'white',
+              WebkitTextFillColor: 'transparent',
               margin: 0
             }}>
               My Bookings
             </h1>
-            <span style={{ fontSize: '2rem' }}></span>
+            <span style={{ fontSize: '2rem' }}>📅</span>
           </div>
-          <p style={{ color: '#283123', fontSize: '1.25rem', margin: 0 }}>
+          <p style={{ color: '#6b7280', fontSize: '1.125rem', margin: 0 }}>
             Manage all your appointments
           </p>
         </div>
 
         {/* Filter Tabs */}
         <div style={{ 
-          background: 'white', 
+          background: '#f3f4f6', 
           borderRadius: '16px', 
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
           padding: '1rem',
@@ -244,6 +253,7 @@ export default function MyBookingsPage() {
         }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
             {[
+              { key: 'active', label: 'Active' },
               { key: 'all', label: 'All', count: bookings.length },
               { key: 'upcoming', label: 'Upcoming' },
               { key: 'past', label: 'Past' }
@@ -342,7 +352,7 @@ export default function MyBookingsPage() {
                   <div
                     key={booking.id}
                     style={{
-                      background: 'white',
+                      background: '#EACFA3',
                       borderRadius: '20px',
                       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
                       overflow: 'hidden',
@@ -497,7 +507,7 @@ export default function MyBookingsPage() {
                             border: '2px solid #e5e7eb'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#FFD1E2'
+                            e.currentTarget.style.background = '#e5e7eb'
                             e.currentTarget.style.borderColor = '#d1d5db'
                           }}
                           onMouseLeave={(e) => {
@@ -519,17 +529,14 @@ export default function MyBookingsPage() {
                               color: '#991b1b',
                               border: '2px solid #fecaca',
                               borderRadius: '12px',
-                              textAlign: 'center',
-                              fontSize: '1rem',
-                              fontWeight: '750',
-                              fontWeight: 'bold',
+                              fontWeight: '600',
                               cursor: isCancelling ? 'not-allowed' : 'pointer',
                               transition: 'all 0.2s',
                               opacity: isCancelling ? 0.6 : 1
                             }}
                             onMouseEnter={(e) => {
                               if (!isCancelling) {
-                                e.currentTarget.style.background = '#E5203A'
+                                e.currentTarget.style.background = '#fecaca'
                                 e.currentTarget.style.borderColor = '#fca5a5'
                               }
                             }}
