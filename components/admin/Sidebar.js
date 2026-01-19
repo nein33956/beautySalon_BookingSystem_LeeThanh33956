@@ -2,15 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { 
-  LayoutDashboard, 
-  Scissors, 
-  Users, 
-  UserCog, 
-  Calendar,
-  LogOut 
-} from 'lucide-react'
-
 export default function Sidebar() {
   const pathname = usePathname()
   
@@ -18,27 +9,27 @@ export default function Sidebar() {
     {
       name: 'Dashboard',
       path: '/admin',
-      icon: LayoutDashboard
+      icon: '📊'
     },
     {
       name: 'Services',
       path: '/admin/services',
-      icon: Scissors
+      icon: '✂️'
     },
     {
       name: 'Staff',
       path: '/admin/staff',
-      icon: UserCog
+      icon: '👥'
     },
     {
       name: 'Customers',
       path: '/admin/customers',
-      icon: Users
+      icon: '👤'
     },
     {
       name: 'Bookings',
       path: '/admin/bookings',
-      icon: Calendar
+      icon: '📅'
     }
   ]
   
@@ -49,12 +40,18 @@ export default function Sidebar() {
     return pathname.startsWith(path)
   }
   
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
+
   return (
     <aside className="admin-sidebar">
       {/* Logo */}
       <div className="sidebar-header">
         <h1 className="sidebar-logo">
-          <Scissors size={24} />
+          <span style={{ fontSize: '1.5rem' }}>✂️</span>
           <span>Beauty Salon</span>
         </h1>
         <p className="sidebar-subtitle">Admin Panel</p>
@@ -63,14 +60,13 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="sidebar-nav">
         {menuItems.map((item) => {
-          const Icon = item.icon
           return (
             <Link
               key={item.path}
               href={item.path}
               className={`sidebar-item ${isActive(item.path) ? 'active' : ''}`}
             >
-              <Icon size={20} />
+              <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
               <span>{item.name}</span>
             </Link>
           )
@@ -79,8 +75,8 @@ export default function Sidebar() {
       
       {/* Logout */}
       <div className="sidebar-footer">
-        <button className="sidebar-item logout">
-          <LogOut size={20} />
+        <button className="sidebar-item logout" onClick={handleLogout}>
+          <span style={{ fontSize: '1.25rem' }}>🚪</span>
           <span>Logout</span>
         </button>
       </div>
