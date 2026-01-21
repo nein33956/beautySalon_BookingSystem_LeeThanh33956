@@ -35,7 +35,9 @@ export default function AdminNavbar() {
       <div className="navbar-content">
         {/* Search or Title */}
         <div className="navbar-left">
-          <h2 className="navbar-title">Admin Dashboard</h2>
+          <h2 
+            className="navbar-title">Admin Dashboard
+          </h2>
         </div>
         
         {/* Right side */}

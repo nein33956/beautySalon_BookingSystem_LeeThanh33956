@@ -30,7 +30,7 @@ export default function ServicesManagement() {
     'Makeup'
   ]
   
-  const durations = [15, 30, 45, 60, 90, 120, 150, 180]
+  const durations = [30, 45, 60, 90, 120, 150, 180, 200]
   
   const supabase = createClient()
   

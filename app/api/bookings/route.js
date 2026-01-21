@@ -247,7 +247,7 @@ export async function POST(request) {
         .in('status', ['pending', 'confirmed'])
       
       if (conflictError) {
-        console.error('⚠️ Conflict check error:', conflictError)
+        console.error('Conflict check error:', conflictError)
       }
       
       if (conflicts && conflicts.length > 0) {

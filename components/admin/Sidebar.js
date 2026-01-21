@@ -8,28 +8,23 @@ export default function Sidebar() {
   const menuItems = [
     {
       name: 'Dashboard',
-      path: '/admin',
-      icon: '📊'
+      path: '/admin'
     },
     {
       name: 'Services',
-      path: '/admin/services',
-      icon: '✂️'
+      path: '/admin/services'
     },
     {
       name: 'Staff',
-      path: '/admin/staff',
-      icon: '👥'
+      path: '/admin/staff'
     },
     {
       name: 'Customers',
-      path: '/admin/customers',
-      icon: '👤'
+      path: '/admin/customers'
     },
     {
       name: 'Bookings',
-      path: '/admin/bookings',
-      icon: '📅'
+      path: '/admin/bookings'
     }
   ]
   
