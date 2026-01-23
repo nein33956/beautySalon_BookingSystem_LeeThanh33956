@@ -1,3 +1,4 @@
+// my-bookings/page.js
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -67,6 +68,17 @@ export default function MyBookingsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+      
+      if (profile?.role === 'admin') {
+        router.replace('/admin/dashboard')
         return
       }
 

@@ -16,19 +16,19 @@ export default function LoginPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    console.log('\n🔐 ===== LOGIN START =====')
-    console.log('📧 Email:', email)
+    console.log('\n===== LOGIN START =====')
+    console.log('Email:', email)
     setLoading(true)
     setError('')
 
     try {
-      console.log('⏳ Calling signInWithPassword...')
+      console.log('Calling signInWithPassword...')
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      console.log('📊 Login result:', {
+      console.log('Login result:', {
         success: !!data.session,
         userId: data.session?.user?.id,
         email: data.session?.user?.email,
@@ -43,12 +43,12 @@ export default function LoginPage() {
         throw new Error('No session created')
       }
 
-      console.log('✅ Login success!')
-      console.log('🍪 Session created, cookies should be set')
+      console.log('Login success!')
+      console.log('Session created, cookies should be set')
       
       // ✅ Verify session was saved
       const { data: sessionCheck } = await supabase.auth.getSession()
-      console.log('🔍 Session check:', {
+      console.log('Session check:', {
         exists: !!sessionCheck.session,
         userId: sessionCheck.session?.user?.id
       })
@@ -58,7 +58,7 @@ export default function LoginPage() {
       }
 
       // ✅ GET USER ROLE
-      console.log('📋 Fetching user role...')
+      console.log('Fetching user role...')
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role, full_name')
@@ -66,30 +66,30 @@ export default function LoginPage() {
         .single()
       
       if (profileError) {
-        console.error('⚠️ Profile fetch error:', profileError)
+        console.error('Profile fetch error:', profileError)
       }
 
       const userRole = profile?.role || 'customer'
-      console.log('👤 User role:', userRole)
-      console.log('👤 User name:', profile?.full_name)
+      console.log('User role:', userRole)
+      console.log('User name:', profile?.full_name)
 
       // ✅ Small delay to ensure cookies are written
       await new Promise(resolve => setTimeout(resolve, 500))
       
       // ✅ REDIRECT BASED ON ROLE
       if (userRole === 'admin') {
-        console.log('👑 Admin detected → Redirecting to /admin')
+        console.log('Admin detected → Redirecting to /admin')
         window.location.href = '/admin'
       } else if (userRole === 'staff') {
-        console.log('👨‍💼 Staff detected → Redirecting to /staff')
+        console.log('Staff detected → Redirecting to /staff')
         window.location.href = '/staff'
       } else {
-        console.log('🛍️ Customer detected → Redirecting to /my-bookings')
+        console.log('Customer detected → Redirecting to /my-bookings')
         window.location.href = '/my-bookings'
       }
       
     } catch (err) {
-      console.error('❌ Login error:', err)
+      console.error('Login error:', err)
       setError(err.message || 'Login failed. Please try again.')
       setLoading(false)
     }
