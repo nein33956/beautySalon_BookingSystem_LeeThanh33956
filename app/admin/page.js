@@ -1,3 +1,4 @@
+//app/admin/page.js
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -31,12 +32,12 @@ export default function AdminDashboard() {
       const month = String(now.getMonth() + 1).padStart(2, '0')
       const firstDayOfMonth = `${year}-${month}-01`
       
-      // 1. TODAY'S BOOKINGS
+      // 1. TODAY'S BOOKINGS (Count all active bookings)
       const { data: todayBookings, error: todayError } = await supabase
         .from('bookings')
         .select('id')
         .eq('booking_date', today)
-        .in('status', ['pending', 'confirmed'])
+        .neq('status', 'cancelled')  // ✅ Count tất cả trừ cancelled
       
       console.log('📊 Today bookings:', {
         count: todayBookings?.length || 0,
@@ -55,11 +56,11 @@ export default function AdminDashboard() {
       })
 
       
-      // 3. MONTHLY REVENUE
+      // 3. MONTHLY REVENUE (✅ Count all except cancelled)
       const { data: monthBookings, error: revenueError } = await supabase
         .from('bookings')
-        .select('total_price')
-        .eq('status', 'confirmed')
+        .select('total_price, status')
+        .neq('status', 'cancelled')  // ✅ Tất cả trừ cancelled
         .gte('booking_date', firstDayOfMonth)
       
       const revenue = monthBookings?.reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0) || 0
@@ -67,6 +68,7 @@ export default function AdminDashboard() {
       console.log('💰 Revenue:', {
         count: monthBookings?.length || 0,
         total: revenue,
+        bookings: monthBookings,
         error: revenueError?.message
       })
       
@@ -81,26 +83,55 @@ export default function AdminDashboard() {
         error: servicesError?.message
       })
       
-      // 5. RECENT BOOKINGS (FIX: Use correct relationships)
-      const { data: recent, error: recentError } = await supabase
+      // 5. RECENT BOOKINGS (Simplified - no nested joins)
+      const { data: recentRaw, error: recentError } = await supabase
         .from('bookings')
-        .select(`
-          id,
-          booking_date,
-          start_time,
-          status,
-          total_price,
-          service:services(name),
-          customer:customers(id, profiles:profiles(full_name))
-        `)
+        .select('id, booking_date, start_time, status, total_price, customer_id, service_id')
         .order('created_at', { ascending: false })
         .limit(5)
       
-      console.log('📋 Recent bookings:', {
-        count: recent?.length || 0,
-        data: recent,
+      console.log('📋 Recent bookings (raw):', {
+        count: recentRaw?.length || 0,
+        data: recentRaw,
         error: recentError?.message
       })
+      
+      // Enrich with customer and service data
+      const recent = []
+      if (recentRaw && recentRaw.length > 0) {
+        for (const booking of recentRaw) {
+          try {
+            // Get customer name from profiles
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', booking.customer_id)
+              .single()
+            
+            // Get service name
+            const { data: service } = await supabase
+              .from('services')
+              .select('name')
+              .eq('id', booking.service_id)
+              .single()
+            
+            recent.push({
+              ...booking,
+              customer: { profiles: { full_name: profile?.full_name || 'N/A' }},
+              service: { name: service?.name || 'N/A' }
+            })
+          } catch (err) {
+            console.error('Error enriching booking:', err)
+            recent.push({
+              ...booking,
+              customer: { profiles: { full_name: 'N/A' }},
+              service: { name: 'N/A' }
+            })
+          }
+        }
+      }
+      
+      console.log('📋 Recent bookings (enriched):', recent)
       
       // Set stats
       setStats({

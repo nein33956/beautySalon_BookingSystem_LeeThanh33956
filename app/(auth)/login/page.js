@@ -46,7 +46,7 @@ export default function LoginPage() {
       console.log('Login success!')
       console.log('Session created, cookies should be set')
       
-      // ✅ Verify session was saved
+
       const { data: sessionCheck } = await supabase.auth.getSession()
       console.log('Session check:', {
         exists: !!sessionCheck.session,
@@ -57,7 +57,6 @@ export default function LoginPage() {
         throw new Error('Session not persisted!')
       }
 
-      // ✅ GET USER ROLE
       console.log('Fetching user role...')
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -73,7 +72,6 @@ export default function LoginPage() {
       console.log('User role:', userRole)
       console.log('User name:', profile?.full_name)
 
-      // ✅ Small delay to ensure cookies are written
       await new Promise(resolve => setTimeout(resolve, 500))
       
       // ✅ REDIRECT BASED ON ROLE

@@ -286,7 +286,7 @@ export async function POST(request) {
       start_time: time,
       end_time: endTime,
       total_price: service.price,
-      status: 'pending',
+      status: 'confirmed',
       notes: notes || null,
       created_at: new Date().toISOString()
     }
